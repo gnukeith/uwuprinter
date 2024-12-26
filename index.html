@@ -1,0 +1,377 @@
+<!doctype html>
+<html>
+    <head>
+        <title>UwU System Info Checker ✨</title>
+        <style>
+            body {
+                font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+                max-width: 900px;
+                margin: 2rem auto;
+                padding: 0 1rem;
+                background-color: #fce8f3;
+                color: #4a4a4a;
+            }
+            .info-card {
+                background: white;
+                padding: 1.5rem;
+                border-radius: 15px;
+                margin-bottom: 1.2rem;
+                box-shadow: 0 4px 8px rgba(255, 182, 193, 0.3);
+                transition: transform 0.2s;
+                border: 2px solid #ffb6c1;
+            }
+            .info-card:hover {
+                transform: translateY(-3px);
+            }
+            .label {
+                font-weight: bold;
+                color: #ff69b4;
+                font-size: 1.1em;
+            }
+            .value {
+                color: #4a4a4a;
+                margin-left: 8px;
+                word-break: break-word;
+            }
+            .sub-info {
+                margin-left: 2.5rem;
+                margin-top: 0.5rem;
+                font-size: 0.9em;
+                color: #666;
+            }
+            h1 {
+                color: #ff69b4;
+                text-align: center;
+                font-size: 2.5em;
+                margin-bottom: 1.5rem;
+                text-shadow: 2px 2px 4px rgba(255, 182, 193, 0.5);
+            }
+            .header-container {
+                text-align: center;
+                margin-bottom: 2rem;
+            }
+            .subtitle {
+                color: #ff99cc;
+                font-size: 1.2em;
+                margin-top: -1rem;
+            }
+            .emoji {
+                font-size: 1.5em;
+                margin-right: 8px;
+                vertical-align: middle;
+            }
+            .refresh-button {
+                background-color: #ff99cc;
+                border: none;
+                padding: 10px 20px;
+                border-radius: 25px;
+                color: white;
+                font-size: 1.1em;
+                cursor: pointer;
+                margin: 1rem auto;
+                display: block;
+                transition: all 0.3s;
+            }
+            .refresh-button:hover {
+                background-color: #ff69b4;
+                transform: scale(1.05);
+            }
+            .section-title {
+                color: #ff69b4;
+                margin-top: 0.5rem;
+                font-weight: bold;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="header-container">
+            <h1>✨ System Information ✨</h1>
+            <div class="subtitle">
+                Super detailed system analysis! (｡♥‿♥｡)
+            </div>
+        </div>
+
+        <div id="systemInfo"></div>
+        <button onclick="getSystemInfo()" class="refresh-button">
+            🔄 Refresh Info
+        </button>
+
+        <script>
+            const emojis = {
+                cpu: "🧠",
+                memory: "💾",
+                gpu: "🎮",
+                screen: "🖥️",
+                browser: "🌐",
+                battery: "🔋",
+                network: "📡",
+                platform: "💻",
+                features: "⚙️",
+                media: "🎥",
+                security: "🔒",
+                languages: "🌍",
+            };
+
+            function createInfoCard(label, value, emoji, subInfo = []) {
+                const subInfoHtml =
+                    subInfo.length > 0
+                        ? '<div class="sub-info">' +
+                          subInfo.join("<br>") +
+                          "</div>"
+                        : "";
+
+                return `
+                <div class="info-card">
+                    <span class="emoji">${emoji}</span>
+                    <span class="label">${label}:</span>
+                    <span class="value">${value}</span>
+                    ${subInfoHtml}
+                </div>
+            `;
+            }
+
+            function detectBrowser() {
+                const userAgent = navigator.userAgent;
+                let browserName = "Unknown";
+                let browserVersion = "";
+                let engineVersion = "";
+
+                // Detect browser and version
+                if (userAgent.includes("Firefox/")) {
+                    browserName = "Firefox";
+                    browserVersion = userAgent.match(/Firefox\/([\d.]+)/)[1];
+                    engineVersion = "Gecko";
+                } else if (userAgent.includes("Chrome/")) {
+                    if (userAgent.includes("Edg/")) {
+                        browserName = "Microsoft Edge";
+                        browserVersion = userAgent.match(/Edg\/([\d.]+)/)[1];
+                    } else if (userAgent.includes("OPR/")) {
+                        browserName = "Opera";
+                        browserVersion = userAgent.match(/OPR\/([\d.]+)/)[1];
+                    } else {
+                        browserName = "Chrome";
+                        browserVersion = userAgent.match(/Chrome\/([\d.]+)/)[1];
+                    }
+                    engineVersion = "Blink";
+                } else if (userAgent.includes("Safari/")) {
+                    browserName = "Safari";
+                    browserVersion =
+                        userAgent.match(/Version\/([\d.]+)/)?.[1] || "Unknown";
+                    engineVersion = "WebKit";
+                }
+
+                return {
+                    name: browserName,
+                    version: browserVersion,
+                    engine: engineVersion,
+                    userAgent: userAgent,
+                };
+            }
+
+            function getWebGLInfo() {
+                const canvas = document.createElement("canvas");
+                const gl =
+                    canvas.getContext("webgl") ||
+                    canvas.getContext("experimental-webgl");
+
+                if (!gl) {
+                    return { renderer: "WebGL not supported", vendor: "N/A" };
+                }
+
+                const debugInfo = gl.getExtension("WEBGL_debug_renderer_info");
+                return {
+                    renderer: debugInfo
+                        ? gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL)
+                        : "Unknown",
+                    vendor: debugInfo
+                        ? gl.getParameter(debugInfo.UNMASKED_VENDOR_WEBGL)
+                        : "Unknown",
+                    version: gl.getParameter(gl.VERSION),
+                    shadingLanguageVersion: gl.getParameter(
+                        gl.SHADING_LANGUAGE_VERSION,
+                    ),
+                    maxTextureSize: gl.getParameter(gl.MAX_TEXTURE_SIZE),
+                };
+            }
+
+            async function getSystemInfo() {
+                const systemInfoDiv = document.getElementById("systemInfo");
+                const info = [];
+
+                // Browser Detection
+                const browserInfo = detectBrowser();
+                info.push(
+                    createInfoCard(
+                        "Browser",
+                        `${browserInfo.name} ${browserInfo.version}`,
+                        emojis.browser,
+                        [
+                            `Engine: ${browserInfo.engine}`,
+                            `User Agent: ${browserInfo.userAgent}`,
+                            `Cookies Enabled: ${navigator.cookieEnabled}`,
+                            `Do Not Track: ${navigator.doNotTrack || "Not specified"}`,
+                            `JavaScript Enabled: Yes`,
+                        ],
+                    ),
+                );
+
+                // CPU & Memory Info
+                const cpuCores =
+                    navigator.hardwareConcurrency || "Not available";
+                info.push(
+                    createInfoCard(
+                        "System",
+                        `${cpuCores} CPU Cores`,
+                        emojis.cpu,
+                        [
+                            `Platform: ${navigator.platform}`,
+                            `OS: ${navigator.userAgentData?.platform || "Unknown"}`,
+                            `RAM: ${navigator.deviceMemory ? navigator.deviceMemory + " GB" : "Unknown"}`,
+                            `64-bit: ${navigator.userAgentData?.bitness === "64" ? "Yes" : "Unknown"}`,
+                        ],
+                    ),
+                );
+
+                // GPU & Graphics
+                const gpuInfo = getWebGLInfo();
+                info.push(
+                    createInfoCard("Graphics", gpuInfo.renderer, emojis.gpu, [
+                        `Vendor: ${gpuInfo.vendor}`,
+                        `WebGL Version: ${gpuInfo.version}`,
+                        `Shading Language: ${gpuInfo.shadingLanguageVersion}`,
+                        `Max Texture Size: ${gpuInfo.maxTextureSize}x${gpuInfo.maxTextureSize}`,
+                    ]),
+                );
+
+                // Screen & Display
+                const screenInfo = [
+                    `Resolution: ${window.screen.width}x${window.screen.height}`,
+                    `Available: ${window.screen.availWidth}x${window.screen.availHeight}`,
+                    `Color Depth: ${window.screen.colorDepth}-bit`,
+                    `Pixel Ratio: ${window.devicePixelRatio}x`,
+                    `Orientation: ${screen.orientation?.type || "Unknown"}`,
+                ];
+                info.push(
+                    createInfoCard(
+                        "Display",
+                        "Screen Information",
+                        emojis.screen,
+                        screenInfo,
+                    ),
+                );
+
+                // Network Information
+                if ("connection" in navigator) {
+                    const conn = navigator.connection;
+                    const networkInfo = [
+                        `Type: ${conn.effectiveType || "Unknown"}`,
+                        `Downlink: ${conn.downlink} Mbps`,
+                        `RTT: ${conn.rtt} ms`,
+                        `Save Data: ${conn.saveData ? "On" : "Off"}`,
+                    ];
+                    info.push(
+                        createInfoCard(
+                            "Network",
+                            "Connection Info",
+                            emojis.network,
+                            networkInfo,
+                        ),
+                    );
+                }
+
+                // Battery Status
+                try {
+                    if ("getBattery" in navigator) {
+                        const battery = await navigator.getBattery();
+                        const batteryInfo = [
+                            `Level: ${Math.round(battery.level * 100)}%`,
+                            `Status: ${battery.charging ? "Charging" : "Not charging"}`,
+                            `Time to full: ${battery.charging ? (battery.chargingTime === Infinity ? "Unknown" : battery.chargingTime + "s") : "N/A"}`,
+                            `Time remaining: ${!battery.charging ? (battery.dischargingTime === Infinity ? "Unknown" : battery.dischargingTime + "s") : "N/A"}`,
+                        ];
+                        info.push(
+                            createInfoCard(
+                                "Battery",
+                                "Power Information",
+                                emojis.battery,
+                                batteryInfo,
+                            ),
+                        );
+                    }
+                } catch (e) {
+                    console.log("Battery status not available");
+                }
+
+                // Browser Features
+                const features = [
+                    `Bluetooth: ${"bluetooth" in navigator ? "Supported" : "Not supported"}`,
+                    `USB: ${"usb" in navigator ? "Supported" : "Not supported"}`,
+                    `Gamepad: ${"getGamepads" in navigator ? "Supported" : "Not supported"}`,
+                    `Touch: ${"ontouchstart" in window ? "Supported" : "Not supported"}`,
+                    `Vibration: ${"vibrate" in navigator ? "Supported" : "Not supported"}`,
+                ];
+                info.push(
+                    createInfoCard(
+                        "Features",
+                        "Browser Capabilities",
+                        emojis.features,
+                        features,
+                    ),
+                );
+
+                // Media Capabilities
+                const mediaFeatures = [
+                    `Audio: ${"AudioContext" in window ? "Supported" : "Not supported"}`,
+                    `Video: ${"mediaDevices" in navigator ? "Supported" : "Not supported"}`,
+                    `MIDI: ${"requestMIDIAccess" in navigator ? "Supported" : "Not supported"}`,
+                    `Speech Recognition: ${"SpeechRecognition" in window || "webkitSpeechRecognition" in window ? "Supported" : "Not supported"}`,
+                    `Speech Synthesis: ${"speechSynthesis" in window ? "Supported" : "Not supported"}`,
+                ];
+                info.push(
+                    createInfoCard(
+                        "Media",
+                        "Media Support",
+                        emojis.media,
+                        mediaFeatures,
+                    ),
+                );
+
+                // Security & Privacy
+                const security = [
+                    `HTTPS: ${window.isSecureContext ? "Yes" : "No"}`,
+                    `Credentials API: ${"credentials" in navigator ? "Supported" : "Not supported"}`,
+                    `Crypto: ${"crypto" in window ? "Supported" : "Not supported"}`,
+                    `Permission API: ${"permissions" in navigator ? "Supported" : "Not supported"}`,
+                ];
+                info.push(
+                    createInfoCard(
+                        "Security",
+                        "Security Features",
+                        emojis.security,
+                        security,
+                    ),
+                );
+
+                // Languages & Localization
+                const languageInfo = [
+                    `Primary Language: ${navigator.language}`,
+                    `All Languages: ${navigator.languages.join(", ")}`,
+                    `Time Zone: ${Intl.DateTimeFormat().resolvedOptions().timeZone}`,
+                ];
+                info.push(
+                    createInfoCard(
+                        "Languages",
+                        "Language Settings",
+                        emojis.languages,
+                        languageInfo,
+                    ),
+                );
+
+                systemInfoDiv.innerHTML = info.join("");
+            }
+
+            // Run when page loads
+            window.onload = getSystemInfo;
+        </script>
+    </body>
+</html>
